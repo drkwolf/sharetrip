@@ -13,9 +13,11 @@
     "lint": "eslint --ext .js,.vue src test/unit/specs test/e2e/specs"
   },
   "dependencies": {
+    "lodash": "^4.17.2",
     "marker-clusterer-plus": "^2.1.4",
     "vue": "^2.1.0",
-    "vue2-google-maps": "^0.4.2"
+    "vue2-google-maps": "^0.4.2",
+    "vuex": "^2.0.0"
   },
   "devDependencies": {
     "autoprefixer": "^6.4.0",

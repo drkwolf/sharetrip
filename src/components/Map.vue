@@ -1,14 +1,14 @@
 <template>
-  <div>
-    <div id="menu">
-      <place-input  @place_changed="start = $event" className="controls" label="Add a marker at this place" :select-first-on-enter="true" ></place-input>
-      <place-input @place_changed="end = $event"  className="controls" label="Add a marker at this place" :select-first-on-enter="true" ></place-input>
-      <button v-on:click="addWay"> Add </button>
-      <button v-on:click="reset"> Reset </button>
-    </div>
+  <div id="map" style="width: 100%">
+    <!--<div id="menu">-->
+      <!--<place-input  @place_changed="start = $event" className="controls" label="Add a marker at this place" :select-first-on-enter="true" ></place-input>-->
+      <!--<place-input @place_changed="end = $event"  className="controls" label="Add a marker at this place" :select-first-on-enter="true" ></place-input>-->
+      <!--<button v-on:click="addWay"> Add </button>-->
+      <!--<button v-on:click="reset"> Reset </button>-->
+    <!--</div>-->
 
-    <div style="width: 100%; height: 400px;">
-      <gmap ref='gmap' :center="center" :zoom="9" >
+    <div id="map" style="width: 100%">
+      <gmap id="map" ref='gmap' :center="center" :zoom="9" >
         <gmarker
           v-for="m in markers"
           :position="m.position"
@@ -26,9 +26,6 @@
 
   const STORAGE_KEY = 'stripshare'
   const localStorage = window.localStorage
-  let directionsService
-  let directionsDisplay
-  let mapObject
 
   let waysStorage = {
     fetch: function () {
@@ -45,7 +42,7 @@
   }
 
   export default {
-//    name: 'gmap-map',
+    name: 'gmap-map',
     components: {
       gmap: Map,
       gmarker: Marker,
@@ -55,100 +52,33 @@
       let vm = this
       this.$nextTick(function () {
         loaded.then(function () {
-          mapObject = vm.$refs.gmap.$mapObject
-//          console.log(mapObject)
-          directionsService = new window.google.maps.DirectionsService()
-          directionsDisplay = new window.google.maps.DirectionsRenderer()
+          let mapObject = vm.$refs.gmap.$mapObject
+          let directionsService = new window.google.maps.DirectionsService()
+          let directionsDisplay = new window.google.maps.DirectionsRenderer()
           directionsDisplay.setMap(mapObject)
-          vm.showRoute()
+
+          vm.$store.commit('SET_MAP', mapObject)
+          vm.$store.commit('SET_SERVICE', directionsService)
+          vm.$store.commit('SET_DISPLAY', directionsDisplay)
+//          console.log(mapObject)
+//          vm.showRoute()
         })
       })
     },
-    data () {
+    data: function () {
       return {
         center: {lat: 46.9480, lng: 7.44},
-        markers: [{ position: {lat: 46, lng: 7.0} }, { position: {lat: 46.1, lng: 7.4} }],
-        start: '',
-        end: '',
-        ways: waysStorage.fetch()
-      }
-    },
-    methods: {
-      addWay: function () {
-        var start = this.start
-        var end = this.end
-        console.log('xxx')
-        console.log(start)
-        if (!start || !end) {
-          return
-        }
-        this.ways.push({
-          id: waysStorage.uid++,
-          start: start,
-          end: end
-        })
-        waysStorage.save(this.ways)
-        // add calculatedirection
-        this.showRoute()
-        this.start = ''
-        this.end = ''
-      },
-      reset: function () {
-        window.localStorage.removeItem(STORAGE_KEY)
-      },
-      removeWay: function (way) {
-        this.ways.splice(this.ways.indexOf(way), 1)
-      },
-      updateStart (place) {
-        this.start = place
-//        if (place && place.geometry && place.geometry.location) {
-//          var marker = this.addmarker()
-//          marker.position.lat = place.geometry.location.lat()
-//          marker.position.lng = place.geometry.location.lng()
-//        }
-      },
-      showRoute: function () {
-        let waypts = []
-        let ways = waysStorage.fetch()
-        console.log(ways)
-        let startEnd = ways.shift()
-        console.log(ways)
-
-        ways.forEach(function (pts) {
-          console.log(pts)
-          waypts.push({
-            location: pts.start.geometry.location,
-            stopover: true
-          })
-          waypts.push({
-            location: pts.end.geometry.location,
-            stopover: true
-          })
-        })
-
-        console.log(startEnd)
-
-        directionsService.route({
-          origin: startEnd.start.geometry.location,
-          destination: startEnd.end.geometry.location,
-          waypoints: waypts,
-          optimizeWaypoints: true,
-          travelMode: 'DRIVING'
-        }, function (response, status) {
-          if (status === 'OK') {
-            directionsDisplay.setDirections(response)
-            var route = response.routes[0]
-            console.log(route)
-          } else {
-            window.alert('Directions request failed due to ' + status)
-          }
-        })
+        markers: [{ position: {lat: 46, lng: 7.0} }, { position: {lat: 46.1, lng: 7.4} }]
       }
     }
   }
 </script>
 
 <style>
+  #map, #app {
+    height: 100%;
+  }
+
   .controls {
     margin-top: 10px;
     border: 1px solid transparent;
