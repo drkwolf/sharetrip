@@ -62,6 +62,10 @@
         this.$refs.placeStart.$el.getElementsByTagName('input')[0].value = ''
         this.$refs.placeEnd.$el.getElementsByTagName('input')[0].value = ''
         this.showRoute()
+        document.querySelector('.mdl-layout__drawer').addEventListener('click', function () {
+          document.querySelector('.mdl-layout__obfuscator').classList.remove('is-visible')
+          this.classList.remove('is-visible')
+        }, false)
       },
       reset: function () {
         this.$store.commit('RESET_WAY')
