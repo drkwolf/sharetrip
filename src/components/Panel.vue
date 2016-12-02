@@ -3,11 +3,11 @@
     <span class="mdl-layout-title">Tripshare</span>
     <nav class="mdl-navigation">
         <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
-          <place-input id="input-origin" @place_changed="start = $event"  className="mdl-textfield__input" :select-first-on-enter="true"></place-input>
+          <place-input defaultPlace="Zurich, Switzerland" ref=placeStart @place_changed="start=$event"  className="mdl-textfield__input" :select-first-on-enter="true"></place-input>
           <label class="mdl-textfield__label" for="input-origin">Origine</label>
         </div>
         <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
-          <place-input id="input-dest" @place_changed="end = $event"  className="mdl-textfield__input" :select-first-on-enter="true"></place-input>
+          <place-input defaultPlace="Geneva, Switzerland" ref=placeEnd @place_changed="end=$event"  className="mdl-textfield__input" :select-first-on-enter="true"></place-input>
           <label class="mdl-textfield__label" for="input-dest">Destination</label>
         </div>
         <!-- Raised button with ripple -->
@@ -25,8 +25,8 @@
         </span>
         <div style="display=inline;">
           <ul>
-            <li> origin: {{ way.start.formatted_address}} </li>
-            <li> destination: {{ way.end.formatted_address}} </li>
+            <!--<li> origin: {{ way.start.formatted_address}} </li>-->
+            <!--<li> destination: {{ way.end.formatted_address}} </li>-->
           </ul>
         </div>
       </li>
@@ -38,23 +38,6 @@
 <script>
   import {PlaceInput} from 'vue2-google-maps'
   import clone from 'lodash/clone'
-
-  const STORAGE_KEY = 'stripshare'
-  const localStorage = window.localStorage
-
-  let waysStorage = {
-    fetch: function () {
-      var ways = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
-      ways.forEach(function (way, index) {
-        way.id = index
-      })
-      waysStorage.uid = ways.length
-      return ways
-    },
-    save: function (ways) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(ways))
-    }
-  }
 
   export default {
     name: 'panel',
@@ -76,13 +59,13 @@
         if (!start || !end) return
         this.$store.commit('ADD_WAY', {start: start, end: end})
         // FIXME update inputs
-//        this.start = ''
-//        this.end = ''
+        this.$refs.placeStart.$el.getElementsByTagName('input')[0].value = ''
+        this.$refs.placeEnd.$el.getElementsByTagName('input')[0].value = ''
         this.showRoute()
       },
       reset: function () {
         this.$store.commit('RESET_WAY')
-        window.localStorage.removeItem(STORAGE_KEY)
+        this.showRoute()
       },
       removeWay: function (way) {
         this.$store.commit('DEL_WAY')
@@ -91,21 +74,27 @@
         let state = this.state
         let ways = clone(this.$store.state.ways)
 
-        if (!ways.length) return
+        if (!ways.length) {
+          state.display.set('directions', null)
+          return
+        }
 //        console.log(ways)
 
         let startEnd = ways.shift()
         let waypts = []
         ways.forEach(function (pts) {
-          console.log(pts)
-          waypts.push({
-            location: pts.start.geometry.location,
-            stopover: true
-          })
-          waypts.push({
-            location: pts.end.geometry.location,
-            stopover: true
-          })
+          if (pts.start) {
+            waypts.push({
+              location: pts.start.geometry.location,
+              stopover: true
+            })
+          }
+          if (pts.end) {
+            waypts.push({
+              location: pts.end.geometry.location,
+              stopover: true
+            })
+          }
         })
 
         state.service.route({
@@ -123,6 +112,15 @@
             window.alert('Directions request failed due to ' + status)
           }
         })
+      },
+      computeTotalDistance: function (result) {
+        var total = 0
+        var myroute = result.routes[0]
+        for (var i = 0; i < myroute.legs.length; i++) {
+          total += myroute.legs[i].distance.value
+        }
+        total = total / 1000
+        document.getElementById('total').innerHTML = total + ' km'
       }
     }
   }

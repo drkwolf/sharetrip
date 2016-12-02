@@ -32,12 +32,12 @@ const store = new Vuex.Store({
       state.display = display
     },
     ADD_WAY (state, data) {
-      data.id = state.uid + 1
       state.uid += 1
-      console.log(state.ways.length)
+      data.id = state.uid
       state.ways.push(data)
-      console.log(state.ways.length)
-      console.log(data.id)
+    },
+    UPDATE_WAY (state, data) {
+      state.ways[data.id] = data
     },
     DEL_WAY (state, way) {
       state.ways.splice(this.ways.indexOf(way), 1)

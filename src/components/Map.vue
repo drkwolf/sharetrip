@@ -8,44 +8,20 @@
     <!--</div>-->
 
     <div id="map" style="width: 100%">
-      <gmap id="map" ref='gmap' :center="center" :zoom="9" >
-        <gmarker
-          v-for="m in markers"
-          :position="m.position"
-          :clickable="true"
-          :draggable="true"
-          @click="center=m.position"
-        ></gmarker>
-      </gmap>
+      <gmap id="map" ref='gmap' :center="center" :zoom="12" @rightclick="newMarker" >
+     </gmap>
     </div>
   </div>
 </template>
 
 <script>
-  import {Marker, Map, PlaceInput, loaded} from 'vue2-google-maps'
-
-  const STORAGE_KEY = 'stripshare'
-  const localStorage = window.localStorage
-
-  let waysStorage = {
-    fetch: function () {
-      var ways = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
-      ways.forEach(function (way, index) {
-        way.id = index
-      })
-      waysStorage.uid = ways.length
-      return ways
-    },
-    save: function (ways) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(ways))
-    }
-  }
+  import {Map, PlaceInput, loaded} from 'vue2-google-maps'
+  import clone from 'lodash/clone'
 
   export default {
     name: 'gmap-map',
     components: {
       gmap: Map,
-      gmarker: Marker,
       placeInput: PlaceInput
     },
     mounted: function () {
@@ -54,7 +30,11 @@
         loaded.then(function () {
           let mapObject = vm.$refs.gmap.$mapObject
           let directionsService = new window.google.maps.DirectionsService()
-          let directionsDisplay = new window.google.maps.DirectionsRenderer()
+          let directionsDisplay = new window.google.maps.DirectionsRenderer(
+            {
+              draggable: true
+            }
+          )
           directionsDisplay.setMap(mapObject)
 
           vm.$store.commit('SET_MAP', mapObject)
@@ -65,10 +45,97 @@
         })
       })
     },
+    methods: {
+      newMarker: function (mouseArgs) {
+        this.addMarker(mouseArgs.latLng.lat(), mouseArgs.latLng.lng())
+        this.showRoute()
+      },
+      addMarker: function (lat, lng) {
+        let marker = {
+          geometry: {
+            location: {lat: lat, lng: lng}
+          }
+        }
+        console.log('llll :' + this.markers.length)
+        if (this.markers.length === 0) {
+          this.markers.push(marker)
+          this.marker.start = marker
+          if (this.marker.id === 0) {
+            this.$store.commit('ADD_WAY', this.marker)
+            this.marker.id = this.$store.state.ways.uid
+          } else {
+            this.$store.commit('UPDATE_WAY', this.marker)
+          }
+        } else if (this.markers.length === 1) {
+          this.markers.push(marker)
+          this.marker.end = marker
+          if (this.marker.id === 0) {
+            this.$store.commit('ADD_WAY', this.marker)
+            this.marker.id = this.$store.state.ways.uid
+          } else {
+            this.$store.commit('UPDATE_WAY', this.marker)
+          }
+        }
+        console.log(this.marker)
+//        this.markers.push({
+//          position: { lat: 48.8538302, lng: 2.2982161 },
+//          draggable: true,
+//          enabled: true
+//        })
+//        return this.markers[this.markers.length - 1]
+      },
+      showRoute: function () {
+        let state = this.$store.state
+        let ways = clone(this.$store.state.ways)
+
+        if (!ways.length) {
+          state.display.set('directions', null)
+          return
+        }
+
+        let startEnd = ways.shift()
+        let waypts = []
+        ways.forEach(function (pts) {
+          if (pts.start) {
+            waypts.push({
+              location: pts.start.geometry.location,
+              stopover: true
+            })
+          }
+          if (pts.end) {
+            waypts.push({
+              location: pts.end.geometry.location,
+              stopover: true
+            })
+          }
+        })
+
+        state.service.route({
+          origin: startEnd.start.geometry.location,
+          destination: startEnd.end.geometry.location,
+          waypoints: waypts,
+          optimizeWaypoints: true,
+          travelMode: 'DRIVING'
+        }, function (response, status) {
+          if (status === 'OK') {
+            state.display.setDirections(response)
+            var route = response.routes[0]
+            console.log(route)
+          } else {
+            window.alert('Directions request failed due to ' + status)
+          }
+        })
+      }
+    },
     data: function () {
       return {
         center: {lat: 46.9480, lng: 7.44},
-        markers: [{ position: {lat: 46, lng: 7.0} }, { position: {lat: 46.1, lng: 7.4} }]
+        marker: {
+          id: 0,
+          start: null,
+          end: null
+        },
+        markers: []
       }
     }
   }
